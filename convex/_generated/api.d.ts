@@ -14,7 +14,9 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as crons from "../crons.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as waitlist_crons from "../waitlist/crons.js";
 import type * as waitlist_read from "../waitlist/read.js";
 import type * as waitlist_write from "../waitlist/write.js";
 
@@ -27,7 +29,9 @@ import type * as waitlist_write from "../waitlist/write.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   myFunctions: typeof myFunctions;
+  "waitlist/crons": typeof waitlist_crons;
   "waitlist/read": typeof waitlist_read;
   "waitlist/write": typeof waitlist_write;
 }>;

@@ -40,7 +40,10 @@ function App() {
         <p>
           <Button
             onClick={() => {
-              void addNumber({ value: Math.floor(Math.random() * 10) });
+              void addNumber({
+                value: Math.floor(Math.random() * 10),
+                sessionId,
+              });
             }}
           >
             Add a random number

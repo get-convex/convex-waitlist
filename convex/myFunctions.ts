@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
+import { refreshLastActive } from "./waitlist/write";
 
 // Write your Convex functions in any file inside this directory (`convex`).
 // See https://docs.convex.dev/functions for more.
@@ -26,6 +27,7 @@ export const addNumber = mutation({
   // Validators for arguments.
   args: {
     value: v.number(),
+    sessionId: v.string(),
   },
 
   // Mutation implementation.
@@ -35,6 +37,9 @@ export const addNumber = mutation({
     //// See https://docs.convex.dev/database/writing-data.
 
     const id = await ctx.db.insert("numbers", { value: args.value });
+
+    // Waitlist demo: Refresh lastActive for current session
+    await refreshLastActive(ctx, { sessionId: args.sessionId });
 
     console.log("Added new document with id:", id);
     // Optionally, return a value from your mutation.
@@ -66,6 +71,7 @@ export const myAction = action({
     //// Write data by running Convex mutations.
     await ctx.runMutation(api.myFunctions.addNumber, {
       value: args.first,
+      sessionId: "0",
     });
   },
 });

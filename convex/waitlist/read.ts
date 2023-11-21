@@ -44,6 +44,12 @@ export async function newSessionPosition(ctx: QueryCtx) {
   return (tail?.position ?? -1) + 1;
 }
 
+export async function getNumberOfWaiting(ctx: QueryCtx) {
+  const head = await getWaitlistHead(ctx);
+  const tail = await getWaitlistTail(ctx);
+  return head === null || tail === null ? 0 : tail.position - head.position + 1;
+}
+
 export async function getWaitlistHead(ctx: QueryCtx) {
   return await ctx.db
     .query("waitlist")

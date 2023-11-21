@@ -2,8 +2,6 @@ import { useMutation, useQuery } from "convex/react";
 import { ReactNode, useEffect } from "react";
 import { api } from "../../convex/_generated/api";
 
-const LIVENESS_PING_INTERVAL_MS = 1000;
-
 export function Waitlist({
   loading,
   sessionId,
@@ -16,19 +14,18 @@ export function Waitlist({
   children: ReactNode;
 }) {
   const sessionState = useQuery(api.waitlist.read.session, { sessionId });
-  const active = useMutation(api.waitlist.write.active);
+  const join = useMutation(api.waitlist.write.join);
+  const status = sessionState?.status;
   useEffect(() => {
-    const interval = setInterval(() => {
-      void active({ sessionId });
-    }, LIVENESS_PING_INTERVAL_MS);
-    void active({ sessionId });
-    return () => clearInterval(interval);
-  }, [active, sessionId]);
-  console.log();
+    // Join initially and if switched back to waiting
+    if (status === undefined || status === "waiting") {
+      void join({ sessionId });
+    }
+  }, [join, sessionId, status]);
 
   return sessionState === undefined || sessionState === null ? (
     loading ?? null
-  ) : sessionState.status === "waiting" ? (
+  ) : status === "waiting" ? (
     whileWaiting === undefined ? null : (
       <OnWaitlist
         loading={loading}
