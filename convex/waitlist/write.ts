@@ -4,9 +4,10 @@ import { MutationCtx, internalMutation, mutation } from "../_generated/server";
 import {
   getCounter,
   getNumberOfWaiting,
-  getSession,
+  getWaitlistSession,
   newSessionPosition,
   newSessionStatus,
+  validateSessionIsActive,
 } from "./read";
 
 // Defaults to 5 minutes.
@@ -18,7 +19,7 @@ export const join = mutation({
     sessionId: v.string(),
   },
   handler: async (ctx, { sessionId }) => {
-    const existingSession = await getSession(ctx, sessionId);
+    const existingSession = await getWaitlistSession(ctx, sessionId);
 
     if (existingSession !== null) {
       // Already joined
@@ -42,11 +43,16 @@ export const join = mutation({
   },
 });
 
-export async function refreshLastActive(
+export async function validateSessionAndRefreshLastActive(
   ctx: MutationCtx,
-  { sessionId }: { sessionId: string }
+  sessionId: string
 ) {
-  const existingSession = await getSession(ctx, sessionId);
+  await validateSessionIsActive(ctx, sessionId);
+  await refreshLastActive(ctx, sessionId);
+}
+
+export async function refreshLastActive(ctx: MutationCtx, sessionId: string) {
+  const existingSession = await getWaitlistSession(ctx, sessionId);
 
   if (existingSession === null) {
     throw new Error("Unexpected `refreshLastActive` for invalid sessionId");
@@ -59,7 +65,6 @@ export const updateAll = internalMutation({
   args: {},
   handler: async (ctx) => {
     const numWaiting = await getNumberOfWaiting(ctx);
-    console.log(numWaiting);
 
     if (numWaiting <= 0) {
       return;

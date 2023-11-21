@@ -11,7 +11,7 @@ export const session = query({
     sessionId: v.string(),
   },
   handler: async (ctx, { sessionId }) => {
-    const session = await getSession(ctx, sessionId);
+    const session = await getWaitlistSession(ctx, sessionId);
     if (session === null) {
       return null;
     }
@@ -31,6 +31,16 @@ export const global = query({
     };
   },
 });
+
+export async function validateSessionIsActive(
+  ctx: QueryCtx,
+  sessionId: string
+) {
+  const session = await getWaitlistSession(ctx, sessionId);
+  if (session?.status !== "active") {
+    throw new Error(`Waitlist sessionId "${sessionId}" is not active`);
+  }
+}
 
 export async function newSessionStatus(ctx: QueryCtx) {
   const activeSessionsCount = (await getCounter(ctx, "active"))?.count ?? 0;
@@ -65,7 +75,7 @@ export async function getWaitlistTail(ctx: QueryCtx) {
     .first();
 }
 
-export async function getSession(ctx: QueryCtx, sessionId: string) {
+export async function getWaitlistSession(ctx: QueryCtx, sessionId: string) {
   return await ctx.db
     .query("waitlist")
     .withIndex("bySessionId", (q) => q.eq("sessionId", sessionId))

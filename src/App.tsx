@@ -8,7 +8,10 @@ import { useEffect, useState } from "react";
 
 function App() {
   const sessionId = useSessionId();
-  const numbers = useQuery(api.myFunctions.listNumbers, { count: 10 });
+  const numbers = useQuery(api.myFunctions.listNumbers, {
+    count: 10,
+    sessionId,
+  });
   const addNumber = useMutation(api.myFunctions.addNumber);
 
   return (

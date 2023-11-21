@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
-import { refreshLastActive } from "./waitlist/write";
+import { action, mutation, query } from "./_generated/server";
+import { validateSessionIsActive } from "./waitlist/read";
+import { validateSessionAndRefreshLastActive } from "./waitlist/write";
 
 // Write your Convex functions in any file inside this directory (`convex`).
 // See https://docs.convex.dev/functions for more.
@@ -11,10 +12,14 @@ export const listNumbers = query({
   // Validators for arguments.
   args: {
     count: v.number(),
+    sessionId: v.string(),
   },
 
   // Query implementation.
   handler: async (ctx, args) => {
+    //// Waitlist demo: Check that the user is not still waiting
+    await validateSessionIsActive(ctx, args.sessionId);
+
     //// Read the database as many times as you need here.
     //// See https://docs.convex.dev/database/reading-data.
     const numbers = await ctx.db.query("numbers").take(args.count);
@@ -36,10 +41,11 @@ export const addNumber = mutation({
     //// Mutations can also read from the database like queries.
     //// See https://docs.convex.dev/database/writing-data.
 
-    const id = await ctx.db.insert("numbers", { value: args.value });
+    //// Waitlist demo: Check that the user is not still waiting and
+    //// refresh their lastActive timestamp
+    await validateSessionAndRefreshLastActive(ctx, args.sessionId);
 
-    // Waitlist demo: Refresh lastActive for current session
-    await refreshLastActive(ctx, { sessionId: args.sessionId });
+    const id = await ctx.db.insert("numbers", { value: args.value });
 
     console.log("Added new document with id:", id);
     // Optionally, return a value from your mutation.
@@ -53,6 +59,7 @@ export const myAction = action({
   args: {
     first: v.number(),
     second: v.string(),
+    sessionId: v.string(),
   },
 
   // Action implementation.
@@ -65,13 +72,14 @@ export const myAction = action({
     //// Query data by running Convex queries.
     const data = await ctx.runQuery(api.myFunctions.listNumbers, {
       count: 10,
+      sessionId: args.sessionId,
     });
     console.log(data);
 
     //// Write data by running Convex mutations.
     await ctx.runMutation(api.myFunctions.addNumber, {
       value: args.first,
-      sessionId: "0",
+      sessionId: args.sessionId,
     });
   },
 });
