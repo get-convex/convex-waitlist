@@ -46,6 +46,7 @@
     "cmdk": "^0.2.0",
     "convex": "^1.6.1-alpha.0",
     "date-fns": "^2.30.0",
+    "modern-async": "^1.1.4",
     "react": "^18.2.0",
     "react-day-picker": "^8.9.1",
     "react-dom": "^18.2.0",

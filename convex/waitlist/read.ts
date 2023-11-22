@@ -43,7 +43,7 @@ export async function validateSessionIsActive(
 }
 
 export async function newSessionStatus(ctx: QueryCtx) {
-  const activeSessionsCount = (await getCounter(ctx, "active"))?.count ?? 0;
+  const activeSessionsCount = (await getActiveSessionsCounter(ctx))?.count ?? 0;
   return activeSessionsCount < ACTIVE_SESSIONS_COUNT_LIMIT
     ? "active"
     : "waiting";
@@ -82,9 +82,9 @@ export async function getWaitlistSession(ctx: QueryCtx, sessionId: string) {
     .unique();
 }
 
-export async function getCounter(ctx: QueryCtx, status: "active") {
+export async function getActiveSessionsCounter(ctx: QueryCtx) {
   return await ctx.db
     .query("waitlistCounters")
-    .withIndex("byName", (q) => q.eq("name", status))
+    .withIndex("byName", (q) => q.eq("name", "active"))
     .unique();
 }

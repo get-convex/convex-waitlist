@@ -1,8 +1,8 @@
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
+import { map } from "modern-async";
 import { MutationCtx, internalMutation, mutation } from "../_generated/server";
 import {
-  getCounter,
+  getActiveSessionsCounter,
   getNumberOfWaiting,
   getWaitlistSession,
   newSessionPosition,
@@ -14,6 +14,10 @@ import {
 const ACTIVE_SESSION_TIMEOUT_MS =
   +(process.env.ACTIVE_SESSION_TIMEOUT_SECONDS ?? 5 * 60) * 1000;
 
+// Defaults to 1 minute.
+const WAITING_SESSION_TIMEOUT_MS =
+  +(process.env.WAITING_SESSION_TIMEOUT_SECONDS ?? 60) * 1000;
+
 export const join = mutation({
   args: {
     sessionId: v.string(),
@@ -22,7 +26,10 @@ export const join = mutation({
     const existingSession = await getWaitlistSession(ctx, sessionId);
 
     if (existingSession !== null) {
-      // Already joined
+      if (existingSession.status === "waiting") {
+        // waiting user came back, reset their lastActive
+        await ctx.db.patch(existingSession._id, { lastActive: null });
+      }
       return;
     }
 
@@ -32,14 +39,31 @@ export const join = mutation({
       status,
       position,
       sessionId,
-      lastActive: Date.now(),
+      lastActive: status === "active" ? Date.now() : null,
     });
     if (status === "active") {
-      await ctx.scheduler.runAfter(0, internal.waitlist.write.changeCounter, {
-        status,
-        change: 1,
-      });
+      await changeActiveSessionsCounter(ctx, 1);
     }
+  },
+});
+
+export const leave = mutation({
+  args: {
+    sessionId: v.string(),
+  },
+  handler: async (ctx, { sessionId }) => {
+    const existingSession = await getWaitlistSession(ctx, sessionId);
+
+    if (existingSession === null) {
+      // The sesion was deleted already
+      return;
+    }
+
+    if (existingSession.status === "active") {
+      // Ignore, active sessions expire based on user activity
+    }
+
+    await ctx.db.patch(existingSession._id, { lastActive: Date.now() });
   },
 });
 
@@ -70,44 +94,53 @@ export const updateAll = internalMutation({
       return;
     }
 
-    const now = Date.now();
-    const lastActiveCutoff = now - ACTIVE_SESSION_TIMEOUT_MS;
-    const stale = await ctx.db
-      .query("waitlist")
-      .withIndex("byLastActive", (q) =>
-        q.eq("status", "active").lt("lastActive", lastActiveCutoff)
-      )
-      // Handling the extreme edge case that too many people become inactive all at once
-      .take(1000);
-    await Promise.all(stale.map(({ _id }) => ctx.db.delete(_id)));
+    await deleteStaleSessions(ctx, "waiting", WAITING_SESSION_TIMEOUT_MS);
+
+    const staleActiveCount = await deleteStaleSessions(
+      ctx,
+      "active",
+      ACTIVE_SESSION_TIMEOUT_MS
+    );
+
     const ready = await ctx.db
       .query("waitlist")
       .withIndex("byStatus", (q) => q.eq("status", "waiting"))
-      .take(stale.length);
-    await Promise.all(
-      ready.map(({ _id }) =>
-        ctx.db.patch(_id, { status: "active", lastActive: now })
-      )
+      .take(staleActiveCount);
+    const now = Date.now();
+    await map(ready, ({ _id }) =>
+      ctx.db.patch(_id, { status: "active", lastActive: now })
     );
-    await ctx.scheduler.runAfter(0, internal.waitlist.write.changeCounter, {
-      status: "active",
-      change: ready.length - stale.length,
-    });
+    await changeActiveSessionsCounter(ctx, ready.length - staleActiveCount);
   },
 });
 
-export const changeCounter = internalMutation({
-  args: {
-    status: v.literal("active"),
-    change: v.number(),
-  },
-  handler: async (ctx, { status: name, change }) => {
-    const counter = await getCounter(ctx, name);
-    const count = Math.max(0, (counter?.count ?? 0) + change);
-    if (counter === null) {
-      await ctx.db.insert("waitlistCounters", { name, count });
-    } else {
-      await ctx.db.patch(counter._id, { count });
-    }
-  },
-});
+async function deleteStaleSessions(
+  ctx: MutationCtx,
+  status: "active" | "waiting",
+  timeoutMs: number
+) {
+  const now = Date.now();
+  const lastActiveCutoff = now - timeoutMs;
+  const stale = await ctx.db
+    .query("waitlist")
+    .withIndex("byLastActive", (q) =>
+      q
+        .eq("status", status)
+        .gt("lastActive", null)
+        .lt("lastActive", lastActiveCutoff)
+    )
+    // Handling the extreme edge case that too many people become inactive all at once
+    .take(1000);
+  await map(stale, ({ _id }) => ctx.db.delete(_id));
+  return stale.length;
+}
+
+async function changeActiveSessionsCounter(ctx: MutationCtx, change: number) {
+  const counter = await getActiveSessionsCounter(ctx);
+  const count = Math.max(0, (counter?.count ?? 0) + change);
+  if (counter === null) {
+    await ctx.db.insert("waitlistCounters", { name: "active", count });
+  } else {
+    await ctx.db.patch(counter._id, { count });
+  }
+}

@@ -6,7 +6,7 @@ export const waitlistTables = {
     sessionId: v.string(),
     position: v.number(),
     status: v.union(v.literal("waiting"), v.literal("active")),
-    lastActive: v.number(),
+    lastActive: v.union(v.number(), v.null()),
   })
     .index("bySessionId", ["sessionId"])
     .index("byPosition", ["position"])

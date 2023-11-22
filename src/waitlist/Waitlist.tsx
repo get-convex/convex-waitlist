@@ -1,6 +1,7 @@
-import { useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQuery } from "convex/react";
 import { ReactNode, useEffect } from "react";
 import { api } from "../../convex/_generated/api";
+import { getFunctionName } from "convex/server";
 
 export function Waitlist({
   loading,
@@ -49,6 +50,7 @@ function OnWaitlist({
 }) {
   const sessionState = useQuery(api.waitlist.read.session, { sessionId })!;
   const globalState = useQuery(api.waitlist.read.global);
+  useTrackVisiblityChanges(sessionId);
 
   if (globalState === undefined) {
     return loading;
@@ -57,4 +59,30 @@ function OnWaitlist({
   const numWaiting =
     globalState.lastWaitingPosition - globalState.firstWaitingPosition + 1;
   return whileWaiting(position, numWaiting);
+}
+
+function useTrackVisiblityChanges(sessionId: string) {
+  const convex = useConvex();
+  useEffect(() => {
+    const listener = () => {
+      void fetch((convex as any).address + "/api/mutation", {
+        body: JSON.stringify({
+          path: getFunctionName(
+            document.visibilityState === "hidden"
+              ? api.waitlist.write.leave
+              : api.waitlist.write.join
+          ),
+          args: { sessionId },
+          format: "json",
+        }),
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        keepalive: true,
+      });
+    };
+    document.addEventListener("visibilitychange", listener);
+    return () => document.removeEventListener("visibilitychange", listener);
+  });
 }
