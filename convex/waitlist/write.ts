@@ -85,7 +85,7 @@ export async function refreshLastActive(ctx: MutationCtx, sessionId: string) {
   await ctx.db.patch(existingSession._id, { lastActive: Date.now() });
 }
 
-export const updateAll = internalMutation({
+export const updateWaitlist = internalMutation({
   args: {},
   handler: async (ctx) => {
     const numWaiting = await getNumberOfWaiting(ctx);

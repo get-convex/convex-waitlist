@@ -10,6 +10,6 @@ export function setupWaitlistCrons(crons: Crons) {
   crons.interval(
     "waitlist.updateAll",
     { seconds: WAITLIST_UPDATE_INTERVAL_SECONDS },
-    internal.waitlist.write.updateAll
+    internal.waitlist.write.updateWaitlist
   );
 }
