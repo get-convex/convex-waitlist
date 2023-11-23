@@ -21,6 +21,13 @@ to protect your app against surges in demand.
 - The waitlist session creation and refresh logic is in
   [`convex/waitlist/write.ts`](./convex/waitlist/write.ts)
 
+## Demo
+
+You can play with the
+[live demo](https://get-convex.github.io/convex-waitlist/). It's been configured
+to allow only 3 users at a time to have access. You can open multiple browser
+tabs to create multiple user sessions.
+
 ## Running the App
 
 ```
