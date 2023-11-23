@@ -138,8 +138,7 @@ configured on the Convex dashboard (run `npx convex dashboard` to open it):
    });
    ```
 
-7. Implement your UI. React is the simplest, but you could use another client if
-   you’re willing to put in a little bit of time and effort.
+7. Implement your UI. If you're using React:
 
    1. Copy the `src/waitlist` folder from this repo into your
       src/app/pages/lib/whatever client-side source folder
@@ -176,32 +175,11 @@ configured on the Convex dashboard (run `npx convex dashboard` to open it):
    }
    ```
 
+   If you're not using React check out the implemention in
+   [src/waitlist/Watlist.tsx](./src/waitlist/Waitlist.tsx) for inspiration for
+   your own client implementation.
+
 And you're done!
-
-### Tracking activity for waiting sessions
-
-If your app offers some server interaction to waiting users, you can track their
-`lastActive` timestamp for more aggressive session timeout:
-
-```jsx
-import { v } from "convex/values";
-import { mutation } from "./_generated/server";
-import { refreshLastActive } from "./waitlist/write";
-
-export const someWriteWhileWaiting = mutation({
-  args: {
-    // ... some arguments
-    // any string will do as the user/session identifier
-    sessionId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Record that the waiting user is actively using the app.
-    await refreshLastActive(ctx, args.sessionId);
-
-    // ... do whatever you need to do ...
-  },
-});
-```
 
 # What is Convex?
 
