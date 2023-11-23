@@ -4,6 +4,8 @@ An easy to adopt waitlist implementation using [Convex](https://convex.dev).
 Read the [detailed guide](https://stack.convex.dev/wait-a-minute-won-t-you) to
 this implementation on Stack.
 
+![Screenshot of user on a waitlist](./screenshot.png "Waiting in the waitlist")
+
 ## Overview
 
 This repo includes a full-fledged implementation of a waitlist which can be used
