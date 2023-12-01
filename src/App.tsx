@@ -21,7 +21,7 @@ function App() {
           <>
             <p>
               <span className="font-bold">
-                You're on the wailist, thanks for your patience!
+                You're on the waitlist, thanks for your patience!
               </span>
               <br />
               You're {formatCardinal(position)} of {numWaiting} in the line...
